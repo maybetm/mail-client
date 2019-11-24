@@ -5,39 +5,43 @@ import javax.mail.internet.MimeMultipart;
 import javax.mail.search.SubjectTerm;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 /**
- * Класс для выгрузки файлов для сверки с почты
- * и последующего сохранения.
- *
  * @author zebzeev-sv
  * @version 30.08.2019 20:43
  */
-public final class MailManager extends AFileManager<Object> {
+public final class MailManager extends AFileManager {
 
 	private final String host;
 	private final String login;
 	private final String password;
 	private final EMailProtocol protocol;
+	private final String port;
 
-	public MailManager(String fileMask, String host, String login, String password, EMailProtocol protocol) {
-		super(fileMask);
-		this.host = host;
-		this.login = login;
-		this.password = password;
+	public MailManager(Map<String, String> params, EMailProtocol protocol)
+	{
+		super(params.get(EConParams.fileMask.key));
+
+		this.host = params.get(EConParams.mailHost.key);
+		this.login = params.get(EConParams.mailLogin.key);
+		this.password = params.get(EConParams.mailPassword.key);
+		this.port = params.get(EConParams.mailPort.key);
 		this.protocol = protocol;
+
+		logReviseParams(params);
 	}
 
 	@Override
 	public void process() {
-		// задаём параметры подключения, возможно от этого можно отказаться
-		final Properties properties = getProperties();
 		try {
+			// задаём параметры подключения, возможно от этого можно отказаться
+			final Properties properties = getProperties();
 			// устанавливаем параметры соединения
-			Session session = Session.getInstance(properties);
-			session.setDebug(false);
+			Session session = getSession(properties);
+			session.setDebug(true);
 			// устанавлифаем соединение
 			Store store = session.getStore(protocol.value);
 			store.connect(host, login, password);
@@ -123,6 +127,12 @@ public final class MailManager extends AFileManager<Object> {
 		return messages;
 	}
 
+	private Session getSession(Properties properties) {
+		Session session = Session.getInstance(properties);
+		session.setDebug(false);
+		return session;
+	}
+
 	/**
 	 * В зависимости от почтового протокола
 	 * могут менять и параметры подключения к почтовому серверу
@@ -131,9 +141,16 @@ public final class MailManager extends AFileManager<Object> {
 	 */
 	private Properties getProperties() {
 		Properties properties = System.getProperties();
-		properties.setProperty("mail." + protocol.value + ".port", "993");
-		properties.setProperty("mail." + protocol.value + ".connectiontimeout", "5000");
-		properties.setProperty("mail." + protocol.value + ".timeout", "5000");
+		properties.setProperty("mail." + protocol.value + ".port", port);
+		properties.setProperty("mail." + protocol.value + ".connectiontimeout", "10000");
+		properties.setProperty("mail." + protocol.value + ".timeout", "10000");
 		return properties;
+	}
+
+	protected void logReviseParams(Map<String, String> map)
+	{
+		String params = map.entrySet().stream().map(e -> e.getKey() + "=" + e.getValue())
+				.collect(Collectors.joining(","));
+		System.out.println("Техническиее параметры подключения: " + params);
 	}
 }

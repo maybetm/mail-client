@@ -17,4 +17,5 @@ public enum EMailProtocol {
 
 	EMailProtocol(String value) {
 		this.value = value;
-	}}
+	}
+}
