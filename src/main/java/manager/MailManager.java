@@ -54,15 +54,16 @@ public final class MailManager extends AFileManager {
 			// тут выполняется парсинг писем
 			for (Message message : messages) {
 				if (message.isMimeType("multipart/*") && isOneAttachment(message)) {
-					final InputStream inputStream = getArchiveInputStream(message);
-					System.out.println("Одно вложение");
-					// тут должна происходить вся общая херня
+					try (InputStream inputStream = getArchiveInputStream(message)) {
+						System.out.println("Одно вложение");
+						// тут должна происходить вся общая херня
+					}
 				} else {
 					System.out.println("fatalError");
 				}
 			}
 		} catch (Exception ex) {
-			ex.printStackTrace();
+			System.out.println(ex);
 		}
 	}
 
